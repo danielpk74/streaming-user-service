@@ -1,0 +1,64 @@
+service: streaming-user-service
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
+
+frameworkVersion: '>=1.28.0 <2.0.0'
+
+### OWN
+profile: serverless-admin
+region: us-west-2
+
+provider:
+  name: aws
+  runtime: go1.x
+  environment:
+    TABLE_NAME: users-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeTable
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:*:*:*"
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+
+functions:
+  users:
+    handler: bin/users
+    events:
+      - http:
+          path: users
+          method: any
+
+resources:
+  Resources:
+    GoCrudDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: nickname
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+          - AttributeName: password
+            AttributeType: S
+        KeySchema:
+          - AttributeName: nickname
+            KeyType: HASH
+          - AttributeName: email
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: 'users-${opt:stage, self:provider.stage}'
