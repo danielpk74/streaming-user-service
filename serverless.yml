@@ -27,38 +27,34 @@ provider:
       Resource: "arn:aws:dynamodb:*:*:*"
 
 package:
+  individually: true
   exclude:
     - ./**
-  include:
-    - ./bin/**
 
 functions:
   users:
     handler: bin/users
+    package:
+      include:
+        - ./bin/users
     events:
       - http:
           path: users
           method: any
+          cors: true
 
 resources:
   Resources:
-    GoCrudDynamoDbTable:
-      Type: 'AWS::DynamoDB::Table'
-      DeletionPolicy: Retain
+    StreamingUserServiceTable:
+      Type: AWS::DynamoDB::Table
       Properties:
-        AttributeDefinitions:
-          - AttributeName: nickname
-            AttributeType: S
-          - AttributeName: email
-            AttributeType: S
-          - AttributeName: password
-            AttributeType: S
-        KeySchema:
-          - AttributeName: nickname
-            KeyType: HASH
-          - AttributeName: email
-            KeyType: HASH
+        TableName: 'users-${opt:stage, self:provider.stage}'
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-        TableName: 'users-${opt:stage, self:provider.stage}'
+        AttributeDefinitions:
+          - AttributeName: Id
+            AttributeType: B
+        KeySchema:
+          - AttributeName: Id
+            KeyType: HASH

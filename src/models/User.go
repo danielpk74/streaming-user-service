@@ -7,16 +7,17 @@ import (
 
 	"github.com/badoux/checkmail"
 	"github.com/danielpk74/service-core/security"
+	"github.com/google/uuid"
 )
 
 type User struct {
-	ID       uint32 `json: "id"`
-	Nickname string `json: "nickname" validate"required,gte=4,lte=20"`
-	Email    string `json: "email" validate"email, required"`
-	Password string `json: "password" validate"required"`
+	Id       uuid.UUID `json: "id"`
+	Nickname string    `json: "nickname" validate"required,gte=4,lte=20"`
+	Email    string    `json: "email" validate"email, required"`
+	Password string    `json: "password" validate"required"`
 }
 
-func (u *User) BeforeSave() error {
+func (u *User) HashPassword() error {
 	hashedPassword, err := security.Hash(u.Password)
 	if err != nil {
 		return err
@@ -27,7 +28,7 @@ func (u *User) BeforeSave() error {
 }
 
 func (u *User) Prepare() {
-	u.ID = 0
+	u.Id = uuid.New()
 	u.Nickname = html.EscapeString(strings.TrimSpace(u.Nickname))
 	u.Email = html.EscapeString(strings.TrimSpace(u.Email))
 }
@@ -62,7 +63,7 @@ func (u *User) Validate(action string) error {
 			return errors.New("Required password")
 		}
 		if u.Email == "" {
-			return errors.New("Required nickname")
+			return errors.New("Required email")
 		}
 		if err := checkmail.ValidateFormat(u.Email); err != nil {
 			return errors.New("Invalid email")

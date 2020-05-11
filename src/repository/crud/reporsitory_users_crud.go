@@ -13,7 +13,9 @@ import (
 	"github.com/danielpk74/service-core/utils/channels"
 )
 
-func Save(user *models.User) (*dynamodb.PutItemOutput, error) {
+func Save(user models.User) (*dynamodb.PutItemOutput, error) {
+	fmt.Println("REPOSITORY: User received: ", user)
+
 	// Create the dynamo client object
 	done := make(chan bool)
 	sess := session.Must(session.NewSession())
@@ -29,6 +31,7 @@ func Save(user *models.User) (*dynamodb.PutItemOutput, error) {
 		return nil, err
 	}
 
+	fmt.Println("REPOSITORY: User prepared for Dynamo: ", av)
 	go func(ch chan<- bool) {
 		defer close(ch)
 		input := &dynamodb.PutItemInput{

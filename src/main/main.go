@@ -23,7 +23,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{Body: "error maping user object\n", StatusCode: http.StatusUnprocessableEntity}, err
 	}
 
-	_, err = services.CreateUser(&user)
+	_, err = services.CreateUser(user)
 	if err != nil {
 		fmt.Println("Got error calling create")
 		fmt.Println(err.Error())
