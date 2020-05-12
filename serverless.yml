@@ -32,15 +32,25 @@ package:
     - ./**
 
 functions:
-  users:
-    handler: bin/users
+  createUser:
+    handler: bin/createUser
     package:
       include:
-        - ./bin/users
+        - ./bin/createUser
     events:
       - http:
           path: users
-          method: any
+          method: post
+          cors: true
+  loginUser:
+    handler: bin/loginUser
+    package:
+      include:
+        - ./bin/loginUser
+    events:
+      - http:
+          path: login
+          method: post
           cors: true
 
 resources:
@@ -53,8 +63,8 @@ resources:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
         AttributeDefinitions:
-          - AttributeName: Id
-            AttributeType: B
+          - AttributeName: Email
+            AttributeType: S
         KeySchema:
-          - AttributeName: Id
+          - AttributeName: Email
             KeyType: HASH

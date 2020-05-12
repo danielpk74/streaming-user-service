@@ -13,7 +13,7 @@ import (
 	"github.com/danielpk74/service-core/utils/channels"
 )
 
-func Save(user models.User) (*dynamodb.PutItemOutput, error) {
+func Save(user *models.User) (*dynamodb.PutItemOutput, error) {
 	fmt.Println("REPOSITORY: User received: ", user)
 
 	// Create the dynamo client object
@@ -55,4 +55,55 @@ func Save(user models.User) (*dynamodb.PutItemOutput, error) {
 	}
 
 	return nil, err
+}
+
+func LoginUser(email, password string) (models.User, error) {
+	fmt.Println("REPOSITORY: User & Pass: ", email, password)
+
+	// Create the dynamo client object
+	done := make(chan bool)
+	sess := session.Must(session.NewSession())
+	svc := dynamodb.New(sess)
+	userdb := models.User{}
+	var result *dynamodb.GetItemOutput
+	var err error
+
+	go func(ch chan<- bool) {
+		defer close(ch)
+
+		fmt.Println("Trying to read from table: ", os.Getenv("TABLE_NAME"))
+		result, err = svc.GetItem(&dynamodb.GetItemInput{
+			TableName: aws.String(os.Getenv("TABLE_NAME")),
+			Key: map[string]*dynamodb.AttributeValue{
+				"Email": {
+					S: aws.String(email),
+				},
+			},
+		})
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		// Unmarshall the result in to an Item
+		err = dynamodbattribute.UnmarshalMap(result.Item, &userdb)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		if err != nil {
+			ch <- false
+			return
+		}
+
+		ch <- true
+
+	}(done)
+
+	if channels.OK(done) {
+		return userdb, nil
+	}
+
+	return models.User{}, err
 }
