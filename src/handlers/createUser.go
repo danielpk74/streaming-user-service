@@ -12,27 +12,38 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	fmt.Println("Received body: ", request.Body)
-	body := request.Body
+type Response events.APIGatewayProxyResponse
 
-	// Marshall the requrest body
+func Handler(request events.APIGatewayProxyRequest) (Response, error) {
+	fmt.Println("Received body: ", request.Body)
+
+	body := request.Body
 	user := models.User{}
 	err := json.Unmarshal([]byte(body), &user)
 	if err != nil {
-		return events.APIGatewayProxyResponse{Body: "error maping user object\n", StatusCode: http.StatusUnprocessableEntity}, err
+		return Response{Body: "error maping user object\n", StatusCode: http.StatusUnprocessableEntity}, err
 	}
 
 	_, err = services.CreateUser(&user)
 	if err != nil {
 		fmt.Println("Got error calling create")
 		fmt.Println(err.Error())
-		return events.APIGatewayProxyResponse{Body: "Error", StatusCode: http.StatusUnprocessableEntity}, nil
+		return Response{Body: "Error", StatusCode: http.StatusUnprocessableEntity}, nil
 	}
 
-	// Log and return result
-	fmt.Println("Wrote item:  ", user)
-	return events.APIGatewayProxyResponse{Body: "Success\n", StatusCode: 200}, nil
+	user.Password = ""
+	out, _ := json.Marshal(user)
+	resp := Response{
+		StatusCode:      200,
+		IsBase64Encoded: false,
+		Body:            string(out),
+		Headers: map[string]string{
+			"Content-Type":           "application/json",
+			"X-MyCompany-Func-Reply": "hello-handler",
+		},
+	}
+
+	return resp, nil
 }
 
 func main() {

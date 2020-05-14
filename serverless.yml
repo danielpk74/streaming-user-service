@@ -14,6 +14,7 @@ provider:
   runtime: go1.x
   environment:
     TABLE_NAME: users-${opt:stage, self:provider.stage}
+    API_SECRET: as45qasdfjdfhj88988fag6gjsketyvnvnmdfdf
   iamRoleStatements:
     - Effect: Allow
       Action:

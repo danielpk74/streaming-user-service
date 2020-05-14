@@ -57,14 +57,14 @@ func Save(user *models.User) (*dynamodb.PutItemOutput, error) {
 	return nil, err
 }
 
-func LoginUser(email, password string) (models.User, error) {
+func LoginUser(email, password string) (*models.User, error) {
 	fmt.Println("REPOSITORY: User & Pass: ", email, password)
 
 	// Create the dynamo client object
 	done := make(chan bool)
 	sess := session.Must(session.NewSession())
 	svc := dynamodb.New(sess)
-	userdb := models.User{}
+	dUser := models.User{}
 	var result *dynamodb.GetItemOutput
 	var err error
 
@@ -75,7 +75,7 @@ func LoginUser(email, password string) (models.User, error) {
 		result, err = svc.GetItem(&dynamodb.GetItemInput{
 			TableName: aws.String(os.Getenv("TABLE_NAME")),
 			Key: map[string]*dynamodb.AttributeValue{
-				"Email": {
+				"email": {
 					S: aws.String(email),
 				},
 			},
@@ -86,7 +86,7 @@ func LoginUser(email, password string) (models.User, error) {
 		}
 
 		// Unmarshall the result in to an Item
-		err = dynamodbattribute.UnmarshalMap(result.Item, &userdb)
+		err = dynamodbattribute.UnmarshalMap(result.Item, &dUser)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -102,8 +102,8 @@ func LoginUser(email, password string) (models.User, error) {
 	}(done)
 
 	if channels.OK(done) {
-		return userdb, nil
+		return &dUser, nil
 	}
 
-	return models.User{}, err
+	return &dUser, err
 }

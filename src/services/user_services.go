@@ -8,6 +8,7 @@ import (
 	"repository/crud"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	auth "github.com/danielpk74/service-core/auth"
 )
 
 func CreateUser(user *models.User) (*dynamodb.PutItemOutput, error) {
@@ -18,16 +19,35 @@ func CreateUser(user *models.User) (*dynamodb.PutItemOutput, error) {
 		return nil, errors.New("User object is not valid for creating.")
 	}
 
-	fmt.Println("SERVICE: User Prepared & validated: ", user)
+	fmt.Println("SERVICE: User Prepared & validated: ", &user)
 	return crud.Save(user)
 }
 
-func LoginUser(user *models.User) (models.User, error) {
+func LoginUser(user *models.User) (string, error) {
 	user.Prepare()
-	user.HashPassword()
-	err := user.Validate("login")
+	var err error
+	err = user.Validate("login")
 	if err != nil {
-		return models.User{}, errors.New("User object is not valid to login.")
+		return "", errors.New("User object is not valid to login.")
 	}
-	return crud.LoginUser(user.Email, user.Password)
+
+	var dUser *models.User
+	dUser, err = crud.LoginUser(user.Email, user.Password)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println("User in DB", dUser)
+	if dUser.Email == "" {
+		return "", errors.New("User not found")
+	}
+
+	fmt.Println("Password from DB", dUser.Password)
+	if user.ValidatePassword(dUser.Password) {
+		fmt.Println("Password validated")
+		return auth.CreateToken(dUser.Id)
+	}
+
+	fmt.Println("Error after password validation")
+	return "", err
 }

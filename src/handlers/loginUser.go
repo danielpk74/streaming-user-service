@@ -12,7 +12,19 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+type Response events.APIGatewayProxyResponse
+
+type LoginSuccessResponse struct {
+	Success string
+	Token   string
+}
+
+type LoginFailResponse struct {
+	Success string
+	Message string
+}
+
+func Handler(request events.APIGatewayProxyRequest) (Response, error) {
 	fmt.Println("Received body: ", request.Body)
 	body := request.Body
 
@@ -20,19 +32,36 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	user := models.User{}
 	err := json.Unmarshal([]byte(body), &user)
 	if err != nil {
-		return events.APIGatewayProxyResponse{Body: "error maping user object\n", StatusCode: http.StatusUnprocessableEntity}, err
+		return Response{Body: "error maping user object\n", StatusCode: http.StatusUnprocessableEntity}, err
 	}
 
+	var b []byte
 	token, err := services.LoginUser(&user)
 	if err != nil {
-		fmt.Println("Got error getting the token")
-		fmt.Println(err.Error())
-		return events.APIGatewayProxyResponse{Body: "Error", StatusCode: http.StatusUnprocessableEntity}, nil
+		fmt.Println("Got error getting the token", err.Error())
+		b, _ = json.Marshal(&LoginFailResponse{
+			Success: "false",
+			Message: err.Error(),
+		})
+	} else {
+		fmt.Println("Token: ", token)
+		b, _ = json.Marshal(&LoginSuccessResponse{
+			Success: "true",
+			Token:   token,
+		})
 	}
 
-	// Log and return result
-	fmt.Println("Token success", token)
-	return events.APIGatewayProxyResponse{Body: "Success\n", StatusCode: http.StatusOK}, nil
+	resp := Response{
+		StatusCode:      200,
+		IsBase64Encoded: false,
+		Body:            string(b),
+		Headers: map[string]string{
+			"Content-Type":           "application/json",
+			"X-MyCompany-Func-Reply": "hello-handler",
+		},
+	}
+
+	return resp, nil
 }
 
 func main() {
