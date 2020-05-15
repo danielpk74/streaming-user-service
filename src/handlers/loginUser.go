@@ -26,38 +26,41 @@ type LoginFailResponse struct {
 
 func Handler(request events.APIGatewayProxyRequest) (Response, error) {
 	fmt.Println("Received body: ", request.Body)
-	body := request.Body
 
-	// Marshall the request body
+	body := request.Body
 	user := models.User{}
 	err := json.Unmarshal([]byte(body), &user)
 	if err != nil {
 		return Response{Body: "error maping user object\n", StatusCode: http.StatusUnprocessableEntity}, err
 	}
 
-	var b []byte
+	var out []byte
+	var stCode int
 	token, err := services.LoginUser(&user)
 	if err != nil {
 		fmt.Println("Got error getting the token", err.Error())
-		b, _ = json.Marshal(&LoginFailResponse{
+		out, _ = json.Marshal(&LoginFailResponse{
 			Success: "false",
 			Message: err.Error(),
 		})
+		stCode = 500
 	} else {
 		fmt.Println("Token: ", token)
-		b, _ = json.Marshal(&LoginSuccessResponse{
+		out, _ = json.Marshal(&LoginSuccessResponse{
 			Success: "true",
 			Token:   token,
 		})
+		stCode = 200
 	}
 
 	resp := Response{
-		StatusCode:      200,
+		StatusCode:      stCode,
 		IsBase64Encoded: false,
-		Body:            string(b),
+		Body:            string(out),
 		Headers: map[string]string{
-			"Content-Type":           "application/json",
-			"X-MyCompany-Func-Reply": "hello-handler",
+			"Content-Type":                 "application/json",
+			"Access-Control-Allow-Origin":  "*",
+			"Access-Control-Allow-Methods": "POST",
 		},
 	}
 

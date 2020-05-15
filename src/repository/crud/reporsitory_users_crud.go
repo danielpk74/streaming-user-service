@@ -57,8 +57,8 @@ func Save(user *models.User) (*dynamodb.PutItemOutput, error) {
 	return nil, err
 }
 
-func LoginUser(email, password string) (*models.User, error) {
-	fmt.Println("REPOSITORY: User & Pass: ", email, password)
+func GetUserByEmail(email string) (*models.User, error) {
+	fmt.Println("REPOSITORY: User & Pass: ", email)
 
 	// Create the dynamo client object
 	done := make(chan bool)

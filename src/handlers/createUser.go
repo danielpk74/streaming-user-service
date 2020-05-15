@@ -14,6 +14,16 @@ import (
 
 type Response events.APIGatewayProxyResponse
 
+type CreateSuccessResponse struct {
+	User  models.User
+	Token string
+}
+
+type LoginFailResponse struct {
+	Success string
+	Message string
+}
+
 func Handler(request events.APIGatewayProxyRequest) (Response, error) {
 	fmt.Println("Received body: ", request.Body)
 
@@ -24,22 +34,34 @@ func Handler(request events.APIGatewayProxyRequest) (Response, error) {
 		return Response{Body: "error maping user object\n", StatusCode: http.StatusUnprocessableEntity}, err
 	}
 
+	var out []byte
+	var stCode int
 	_, err = services.CreateUser(&user)
 	if err != nil {
-		fmt.Println("Got error calling create")
-		fmt.Println(err.Error())
-		return Response{Body: "Error", StatusCode: http.StatusUnprocessableEntity}, nil
+		fmt.Println("Got error getting the token", err.Error())
+		out, _ = json.Marshal(&LoginFailResponse{
+			Success: "false",
+			Message: err.Error(),
+		})
+		stCode = 500
+	} else {
+		user.Password = ""
+		token, _ := services.CreateToken(user.Id)
+		out, _ = json.Marshal(&CreateSuccessResponse{
+			User:  user,
+			Token: token,
+		})
+		stCode = 201
 	}
 
-	user.Password = ""
-	out, _ := json.Marshal(user)
 	resp := Response{
-		StatusCode:      200,
+		StatusCode:      stCode,
 		IsBase64Encoded: false,
 		Body:            string(out),
 		Headers: map[string]string{
-			"Content-Type":           "application/json",
-			"X-MyCompany-Func-Reply": "hello-handler",
+			"Content-Type":                 "application/json",
+			"Access-Control-Allow-Origin":  "*",
+			"Access-Control-Allow-Methods": "POST",
 		},
 	}
 
